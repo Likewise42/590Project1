@@ -1,0 +1,205 @@
+<!--Used base of Canvas Syncing II Assignment-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" type="text/css" href="/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+    }
+    
+    canvas {
+      margin: 0;
+      border: 1px solid black;
+    }
+    
+    body {
+      background: #eeeeee;
+      font-family: tahoma, verdana, sans serif;
+    }
+    
+    #mainCanvas {
+      background: #ffffff;
+      position:absolute;
+      z-index: 0;
+      left: 10px;
+      top: 10px;
+      box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+    }
+    
+    #bufferCanvas{
+      background: rgba(0,0,0,0);
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      z-index: 1;
+      cursor: pointer;
+    }
+  </style>
+  <script type="text/babel" >
+    "use strict";
+    let socket;
+    let canvas;
+    let ctx;
+    let bufferCanvas;
+    let bufferCtx;
+    let dragging = false;
+
+    let lineWidth;
+    let strokeStyle;
+    let fillStyle;
+
+    const DEFAULT_LINE_WIDTH = 3;
+	const DEFAULT_STROKE_STYLE = "red";
+    const DEFAULT_FILL_STYLE = "blue";
+  
+    const init = () => {
+      socket = io.connect();
+      socket.on('connect', ()=>{
+        console.log('connected to the server');
+        
+        socket.emit('join', {});
+    
+        canvas = document.querySelector("#mainCanvas");
+        ctx = canvas.getContext("2d");
+        
+        bufferCanvas = document.querySelector("#bufferCanvas");
+        bufferCtx = bufferCanvas.getContext("2d");
+        
+        lineWidth = DEFAULT_LINE_WIDTH;
+        strokeStyle = DEFAULT_STROKE_STYLE;
+        fillStyle = DEFAULT_FILL_STYLE;
+        
+        bufferCanvas.onmousedown = doMouseDown;
+        bufferCanvas.onmousemove = doMouseMove;
+        bufferCanvas.onmouseup = doMouseUp;
+        bufferCanvas.onmouseout = doMouseUp;
+        
+        socket.on('recieveDraw', (data)=>{
+          handleMessage(data);
+        });
+        
+        socket.on('requestCanvas', ()=>{
+          sendCanvas();
+        });
+        
+        socket.on('recieveCanvas', (data)=>{
+          handleMessage(data);
+        });
+        
+        socket.on('clear', ()=>{
+          doClear();
+        });
+      });
+    };
+    
+    const handleMessage = (data) => {
+      let image = new Image();
+      
+      image.onload = () => {
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.drawImage(image, data.x, data.y, data.width, data.height);
+        ctx.restore();
+      };
+      
+      image.src = data.imgData;
+    };
+
+    const sendCanvas = () => {
+      const data = {
+        x: 0,
+        y: 0,
+        height: canvas.height,
+        width: canvas.width,
+        imgData: canvas.toDataURL()
+      };
+      
+      socket.emit('sendCanvas', data);
+    };
+
+    const sendData = () => {
+      const data = {
+        x: 0,
+        y: 0,
+        height: bufferCanvas.height,
+        width: bufferCanvas.width,
+        imgData: bufferCanvas.toDataURL()
+      };
+      
+      socket.emit('draw', data);
+    };
+
+    const doClearBuffer = (e) => {
+      bufferCtx.clearRect(0,0,bufferCtx.canvas.width,ctx.canvas.height)
+    };
+
+    const getMouse = (e) => {
+      var mouse = {};
+      mouse.x = e.pageX - e.target.offsetLeft;
+      mouse.y = e.pageY - e.target.offsetTop;
+      return mouse;
+    };
+
+    const doMouseDown = (e) => {
+      dragging = true;
+      const mouse = getMouse(e);
+      bufferCtx.beginPath();
+      bufferCtx.moveTo(mouse.x, mouse.y);
+      
+      sendData();
+    };
+
+    const doMouseMove = (e) => {
+      if (!dragging) {
+        return;
+      }
+      
+      const mouse = getMouse(e);
+      
+      bufferCtx.strokeStyle = strokeStyle;
+      bufferCtx.lineWidth = lineWidth;
+      
+      bufferCtx.lineTo(mouse.x, mouse.y);
+      bufferCtx.stroke();
+      
+      sendData();
+    };
+
+    const doMouseUp = (e) => {
+      bufferCtx.closePath();
+      dragging = false;
+      
+      pushBuffer();
+      
+      sendData();
+      doClearBuffer();
+    };
+
+    const pushBuffer = () => {
+      let image = new Image();
+      
+      image.onload = () => {
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.drawImage(image, 0, 0, bufferCanvas.width, bufferCanvas.height);
+        ctx.restore();
+      };
+      
+      image.src = bufferCanvas.toDataURL();
+    };
+
+    const doClear = () => {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    };
+      
+    window.onload = init;
+  </script>
+</head>
+<body>
+  <canvas id="mainCanvas" width="960px" height="530px"></canvas>
+  <canvas id="bufferCanvas" width="960px" height="530px"></canvas>
+</body>
+</html>

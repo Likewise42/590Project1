@@ -92,6 +92,10 @@
         socket.on('clear', ()=>{
           doClear();
         });
+        
+        socket.on('roomNum', (data)=>{
+          console.dir(data);
+        });
       });
     };
     

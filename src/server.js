@@ -21,31 +21,62 @@ console.log(`Listening on 127.0.0.1: ${port}`);
 const io = socketio(app);
 
 let roomNum = 1;
-let rooms = {
-	room1: {
-		title: 'room1',
-		userNum: 0,
-	},
+const rooms = {
+  room1: {
+    title: 'room1',
+    userNum: 0,
+  },
 };
 
 const join = (sock) => {
-	const socket = sock;
-	let roomToJoin;
-	
-	
-	
-	socket.on('join', () => {
+  const socket = sock;
+  let roomToJoin;
+
+  let makeNew = true;
+
+  const keys = Object.keys(rooms);
+
+  for (let i = 0; i < keys.length; i++) {
+    const room = rooms[keys[i]];
+
+    if (room.userNum < 4) {
+      roomToJoin = room.title;
+      makeNew = false;
+    }
+  }
+
+  if (makeNew) {
+    roomNum++;
+    console.log(`creating room${roomNum}`);
+    
+    rooms[`room${roomNum}`] = {
+      title: `room${roomNum}`,
+      userNum: 0,
+    };
+    
+    console.dir(rooms[`room${roomNum}`]);
+    
+    roomToJoin = rooms[`room${roomNum}`].title;
+    
+  }
+
+  socket.on('join', () => {
+    
+    rooms[roomToJoin].userNum++;
+    console.log(`Joining room ${roomToJoin}. Users:${rooms[roomToJoin].userNum} `);
+
     socket.join(roomToJoin);
+    
+    socket.emit('roomNum',roomToJoin);
 
     socket.broadcast.to('room1').emit('requestCanvas');
   });
-	
 };
 
 const listeners = (sock) => {
   const socket = sock;
-	
-	join(socket);
+
+  join(socket);
 
   socket.on('draw', (data) => {
     socket.broadcast.to('room1').emit('recieveDraw', data);

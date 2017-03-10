@@ -20,14 +20,32 @@ console.log(`Listening on 127.0.0.1: ${port}`);
 
 const io = socketio(app);
 
-const listeners = (sock) => {
-  const socket = sock;
+let roomNum = 1;
+let rooms = {
+	room1: {
+		title: 'room1',
+		userNum: 0,
+	},
+};
 
-  socket.on('join', () => {
-    socket.join('room1');
+const join = (sock) => {
+	const socket = sock;
+	let roomToJoin;
+	
+	
+	
+	socket.on('join', () => {
+    socket.join(roomToJoin);
 
     socket.broadcast.to('room1').emit('requestCanvas');
   });
+	
+};
+
+const listeners = (sock) => {
+  const socket = sock;
+	
+	join(socket);
 
   socket.on('draw', (data) => {
     socket.broadcast.to('room1').emit('recieveDraw', data);

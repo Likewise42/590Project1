@@ -30,7 +30,7 @@ const rooms = {
 
 const join = (sock) => {
   const socket = sock;
-  let roomToJoin;
+  socket.roomToJoin = {};
 
   let makeNew = true;
 
@@ -40,7 +40,7 @@ const join = (sock) => {
     const room = rooms[keys[i]];
 
     if (room.userNum < 4) {
-      roomToJoin = room.title;
+      socket.roomToJoin = room.title;
       makeNew = false;
     }
   }
@@ -48,28 +48,26 @@ const join = (sock) => {
   if (makeNew) {
     roomNum++;
     console.log(`creating room${roomNum}`);
-    
+
     rooms[`room${roomNum}`] = {
       title: `room${roomNum}`,
       userNum: 0,
     };
-    
+
     console.dir(rooms[`room${roomNum}`]);
-    
-    roomToJoin = rooms[`room${roomNum}`].title;
-    
+
+    socket.roomToJoin = rooms[`room${roomNum}`].title;
   }
 
   socket.on('join', () => {
-    
-    rooms[roomToJoin].userNum++;
-    console.log(`Joining room ${roomToJoin}. Users:${rooms[roomToJoin].userNum} `);
+    rooms[socket.roomToJoin].userNum++;
+    console.log(`Joining room ${socket.roomToJoin}. Users:${rooms[socket.roomToJoin].userNum} `);
 
-    socket.join(roomToJoin);
-    
-    socket.emit('roomNum',roomToJoin);
+    socket.join(socket.roomToJoin);
 
-    socket.broadcast.to('room1').emit('requestCanvas');
+    socket.emit('roomNum', socket.roomToJoin);
+
+    socket.broadcast.to(socket.roomToJoin).emit('requestCanvas');
   });
 };
 
@@ -79,11 +77,17 @@ const listeners = (sock) => {
   join(socket);
 
   socket.on('draw', (data) => {
-    socket.broadcast.to('room1').emit('recieveDraw', data);
+    socket.broadcast.to(socket.roomToJoin).emit('recieveDraw', data);
   });
 
   socket.on('sendCanvas', (data) => {
-    socket.broadcast.to('room1').emit('recieveCanvas', data);
+    socket.broadcast.to(socket.roomToJoin).emit('recieveCanvas', data);
+  });
+
+  socket.on('disconnect', () => {
+    socket.leave(socket.roomToJoin);
+    rooms[socket.roomToJoin].userNum--;
+    console.log(`Leaving room ${socket.roomToJoin}`);
   });
 };
 
@@ -94,7 +98,11 @@ io.sockets.on('connection', (socket) => {
 });
 
 setInterval(() => {
-  io.sockets.in('room1').emit('clear');
+  const keys = Object.keys(rooms);
+  for (let i = 0; i < keys.length; i++) {
+    const room = rooms[keys[i]];
+    io.sockets.in(room.title).emit('clear');
+  }
 }, 100000);
 
 console.log('Websocket server started');

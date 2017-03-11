@@ -37,6 +37,12 @@
       z-index: 1;
       cursor: pointer;
     }
+		
+		#roomNum{
+			position: absolute;
+			left: 10px;
+			top: 540px;
+		}
   </style>
   <script type="text/babel" >
     "use strict";
@@ -94,7 +100,8 @@
         });
         
         socket.on('roomNum', (data)=>{
-          console.dir(data);
+					document.querySelector('#roomNum').innerHTML = `Room: ${data}`;
+          console.log(data);
         });
       });
     };
@@ -205,5 +212,6 @@
 <body>
   <canvas id="mainCanvas" width="960px" height="530px"></canvas>
   <canvas id="bufferCanvas" width="960px" height="530px"></canvas>
+	<p id="roomNum"></p>
 </body>
 </html>

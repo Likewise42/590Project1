@@ -20,12 +20,16 @@ console.log(`Listening on 127.0.0.1: ${port}`);
 
 const io = socketio(app);
 
-let roomNum = 1;
-const rooms = {
-  room1: {
-    title: 'room1',
+let roomNum = 0;
+const rooms = {};
+
+const newRoom = (name) => {
+  rooms[name] = {
+    title: name,
     userNum: 0,
-  },
+    userList: {},
+  };
+  console.dir(rooms[name]);
 };
 
 const listeners = (sock) => {
@@ -50,10 +54,7 @@ const listeners = (sock) => {
       roomNum++;
       console.log(`creating room${roomNum}`);
 
-      rooms[`room${roomNum}`] = {
-        title: `room${roomNum}`,
-        userNum: 0,
-      };
+      newRoom(`room${roomNum}`);
 
       console.dir(rooms[`room${roomNum}`]);
 
@@ -87,10 +88,7 @@ const listeners = (sock) => {
     if (makeNew) {
       console.log(`creating room ${data.newRoom}`);
 
-      rooms[data.newRoom] = {
-        title: data.newRoom,
-        userNum: 0,
-      };
+      newRoom(data.newRoom);
 
       console.dir(rooms[data.newRoom]);
 
@@ -116,6 +114,11 @@ const listeners = (sock) => {
     socket.broadcast.to(socket.roomToJoin).emit('recieveCanvas', data);
   });
 
+  socket.on('clearRoom', () => {
+		console.log('recieved clear');
+    io.sockets.in(socket.roomToJoin).emit('clear');
+  });
+
   socket.on('disconnect', () => {
     socket.leave(socket.roomToJoin);
     rooms[socket.roomToJoin].userNum--;
@@ -129,13 +132,13 @@ io.sockets.on('connection', (socket) => {
   listeners(socket);
 });
 
-setInterval(() => {
-  const keys = Object.keys(rooms);
-  for (let i = 0; i < keys.length; i++) {
-    const room = rooms[keys[i]];
-    io.sockets.in(room.title).emit('clear');
-  }
-}, 100000);
+//setInterval(() => {
+//  const keys = Object.keys(rooms);
+//  for (let i = 0; i < keys.length; i++) {
+//    const room = rooms[keys[i]];
+//    io.sockets.in(room.title).emit('clear');
+//  }
+//}, 100000);
 
 console.log('Websocket server started');
 

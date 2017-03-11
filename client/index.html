@@ -72,6 +72,7 @@
         
         document.querySelector("#submitButton").onclick = joinButton;
 				document.querySelector("#roomButton").onclick = changeRoomButton;
+				document.querySelector("#clearButton").onclick = clearButton;
     
         canvas = document.querySelector("#mainCanvas");
         ctx = canvas.getContext("2d");
@@ -137,7 +138,11 @@
 			} else {
 				alert("You must enter a room name!");
 			}
-		}
+		};
+		
+		const clearButton = () => {
+			socket.emit('clearRoom');
+		};
 
     const handleMessage = (data) => {
       let image = new Image();
@@ -248,16 +253,15 @@
   	<canvas id="bufferCanvas" width="960px" height="530px"></canvas>
 		<div id="roomInfo">
 			<input id="changeRoomField" placeholder="Room Name" type="text" />
-			<input id="roomButton" type="submit" value="Change Your Room" />
+			<button id="roomButton"> Change Your Room </button>
 			<p id="roomNum"></p>
+			<button id="clearButton"> Clear the Canvas </button>
 		</div>
 	</div>
 		
 	<div id="userInfo">
 		<input id="usernameField" placeholder="Username" type="text"/>
-		<input id="submitButton" type="submit" value="Connect to the Server" />
+		<button id="submitButton" > Connect to the Server </button>
 	</div>
-	
-	
 </body>
 </html>

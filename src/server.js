@@ -102,6 +102,7 @@ const listeners = (sock) => {
 
     socket.join(socket.roomToJoin);
 
+    socket.emit('clear');
     socket.emit('roomNum', socket.roomToJoin);
 
     socket.broadcast.to(socket.roomToJoin).emit('requestCanvas');

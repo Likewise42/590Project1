@@ -24,7 +24,7 @@ let roomNum = 0;
 const rooms = {};
 
 const newRoom = (sock, name) => {
-	const socket = sock;
+  const socket = sock;
   console.log(`creating room ${name}`);
   rooms[name] = {
     title: name,
@@ -55,7 +55,7 @@ const listeners = (sock) => {
     }
 
     if (makeNew) {
-			roomNum++;
+      roomNum++;
       newRoom(socket, `room${roomNum}`);
     }
 
@@ -72,21 +72,21 @@ const listeners = (sock) => {
   socket.on('changeRoom', (data) => {
     let makeNew = true;
 
-		rooms[socket.roomToJoin].userNum--;
-		
+    rooms[socket.roomToJoin].userNum--;
+
     const keys = Object.keys(rooms);
 
     for (let i = 0; i < keys.length; i++) {
       const room = rooms[keys[i]];
 
-      if (room.title === data.newRoom && room.userNum < 4 ) {
+      if (room.title === data.newRoom && room.userNum < 4) {
         socket.roomToJoin = room.title;
         makeNew = false;
       }
     }
 
     if (makeNew) {
-			roomNum++;
+      roomNum++;
       newRoom(socket, data.newRoom);
     }
 
@@ -110,16 +110,16 @@ const listeners = (sock) => {
   });
 
   socket.on('clearRoom', () => {
-		console.log('recieved clear');
+    console.log('recieved clear');
     io.sockets.in(socket.roomToJoin).emit('clear');
   });
 
   socket.on('disconnect', () => {
-		if(socket.roomToJoin){
-			socket.leave(socket.roomToJoin);
-    	rooms[socket.roomToJoin].userNum--;
-    	console.log(`Leaving room ${socket.roomToJoin}`);
-		}
+    if (socket.roomToJoin) {
+      socket.leave(socket.roomToJoin);
+      rooms[socket.roomToJoin].userNum--;
+      console.log(`Leaving room ${socket.roomToJoin}`);
+    }
   });
 };
 
@@ -129,13 +129,13 @@ io.sockets.on('connection', (socket) => {
   listeners(socket);
 });
 
-//setInterval(() => {
+// setInterval(() => {
 //  const keys = Object.keys(rooms);
 //  for (let i = 0; i < keys.length; i++) {
 //    const room = rooms[keys[i]];
 //    io.sockets.in(room.title).emit('clear');
 //  }
-//}, 100000);
+// }, 100000);
 
 console.log('Websocket server started');
 

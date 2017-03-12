@@ -23,13 +23,17 @@ const io = socketio(app);
 let roomNum = 0;
 const rooms = {};
 
-const newRoom = (name) => {
+const newRoom = (sock, name) => {
+	const socket = sock;
+  console.log(`creating room ${name}`);
   rooms[name] = {
     title: name,
     userNum: 0,
     userList: {},
   };
   console.dir(rooms[name]);
+
+  socket.roomToJoin = rooms[name].title;
 };
 
 const listeners = (sock) => {
@@ -51,14 +55,8 @@ const listeners = (sock) => {
     }
 
     if (makeNew) {
-      roomNum++;
-      console.log(`creating room${roomNum}`);
-
-      newRoom(`room${roomNum}`);
-
-      console.dir(rooms[`room${roomNum}`]);
-
-      socket.roomToJoin = rooms[`room${roomNum}`].title;
+			roomNum++;
+      newRoom(socket, `room${roomNum}`);
     }
 
     rooms[socket.roomToJoin].userNum++;
@@ -74,25 +72,22 @@ const listeners = (sock) => {
   socket.on('changeRoom', (data) => {
     let makeNew = true;
 
+		rooms[socket.roomToJoin].userNum--;
+		
     const keys = Object.keys(rooms);
 
     for (let i = 0; i < keys.length; i++) {
       const room = rooms[keys[i]];
 
-      if (room.title === data.newRoom) {
+      if (room.title === data.newRoom && room.userNum < 4 ) {
         socket.roomToJoin = room.title;
         makeNew = false;
       }
     }
 
     if (makeNew) {
-      console.log(`creating room ${data.newRoom}`);
-
-      newRoom(data.newRoom);
-
-      console.dir(rooms[data.newRoom]);
-
-      socket.roomToJoin = rooms[data.newRoom].title;
+			roomNum++;
+      newRoom(socket, data.newRoom);
     }
 
     rooms[socket.roomToJoin].userNum++;
@@ -120,9 +115,11 @@ const listeners = (sock) => {
   });
 
   socket.on('disconnect', () => {
-    socket.leave(socket.roomToJoin);
-    rooms[socket.roomToJoin].userNum--;
-    console.log(`Leaving room ${socket.roomToJoin}`);
+		if(socket.roomToJoin){
+			socket.leave(socket.roomToJoin);
+    	rooms[socket.roomToJoin].userNum--;
+    	console.log(`Leaving room ${socket.roomToJoin}`);
+		}
   });
 };
 

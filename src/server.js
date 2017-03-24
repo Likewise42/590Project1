@@ -39,8 +39,9 @@ const newRoom = (sock, name) => {
 const listeners = (sock) => {
   const socket = sock;
 
-  socket.on('join', () => {
+  socket.on('join', (data) => {
     socket.roomToJoin = {};
+    socket.name = data.name;
     let makeNew = true;
 
     const keys = Object.keys(rooms);
@@ -64,13 +65,17 @@ const listeners = (sock) => {
 
     socket.join(socket.roomToJoin);
 
-    socket.emit('roomNum', socket.roomToJoin);
+    socket.emit('roomNum', {
+      roomNum: socket.roomToJoin,
+      name: socket.name,
+    });
 
-    socket.broadcast.to(socket.roomToJoin).emit('requestCanvas');
+    socket.broadcast.to(socket.roomToJoin).emit('requestCanvas', { name: socket.name });
   });
 
   socket.on('changeRoom', (data) => {
     let makeNew = true;
+    let joinSuccess = true;
 
     rooms[socket.roomToJoin].userNum--;
 
@@ -79,9 +84,14 @@ const listeners = (sock) => {
     for (let i = 0; i < keys.length; i++) {
       const room = rooms[keys[i]];
 
-      if (room.title === data.newRoom && room.userNum < 4) {
-        socket.roomToJoin = room.title;
-        makeNew = false;
+      if (room.title === data.newRoom) {
+        if (room.userNum < 4) {
+          socket.roomToJoin = room.title;
+          makeNew = false;
+        } else {
+          socket.emit('newRoomFull');
+          joinSuccess = false;
+        }
       }
     }
 
@@ -90,15 +100,20 @@ const listeners = (sock) => {
       newRoom(socket, data.newRoom);
     }
 
-    rooms[socket.roomToJoin].userNum++;
-    console.log(`Joining room ${socket.roomToJoin}. Users:${rooms[socket.roomToJoin].userNum} `);
+    if (joinSuccess) {
+      rooms[socket.roomToJoin].userNum++;
+      console.log(`Joining room ${socket.roomToJoin}. Users:${rooms[socket.roomToJoin].userNum} `);
 
-    socket.join(socket.roomToJoin);
+      socket.join(socket.roomToJoin);
 
-    socket.emit('clear');
-    socket.emit('roomNum', socket.roomToJoin);
+      socket.emit('clear');
+      socket.emit('roomNum',{
+        roomNum: socket.roomToJoin,
+        name: socket.name,
+      });
 
-    socket.broadcast.to(socket.roomToJoin).emit('requestCanvas');
+      socket.broadcast.to(socket.roomToJoin).emit('requestCanvas', { name: socket.name });
+    }
   });
 
   socket.on('draw', (data) => {
@@ -116,6 +131,8 @@ const listeners = (sock) => {
 
   socket.on('disconnect', () => {
     if (socket.roomToJoin) {
+      socket.broadcast.to(socket.roomToJoin).emit('uDisconnect', socket.name);
+
       socket.leave(socket.roomToJoin);
       rooms[socket.roomToJoin].userNum--;
       console.log(`Leaving room ${socket.roomToJoin}`);

@@ -1,276 +1,353 @@
 <!--Used base of Canvas Syncing II Assignment-->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <link rel="stylesheet" type="text/css" href="/style.css">
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-    }
-    
-    canvas {
-      margin: 0;
-      border: 1px solid black;
-    }
-    
-    body {
-      background: #eeeeee;
-      font-family: tahoma, verdana, sans serif;
-    }
-    
-    #mainCanvas {
-      background: #ffffff;
-      position: absolute;
-      z-index: 0;
-      left: 10px;
-      top: 10px;
-      box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
-    }
-    
-    #bufferCanvas{
-      background: rgba(0,0,0,0);
-      position: absolute;
-      z-index: 0;
-      left: 10px;
-      top: 10px;
-      cursor: pointer;
-    }
-		
-		#roomInfo 	{
-			position: absolute;
-			left: 10px;
-			top: 550px;
-		}
-		
-		#actualApp{
-			visibility: hidden;
-		}
-  </style>
-  <script type="text/babel" >
-    "use strict";
-    let socket;
-    let canvas;
-    let ctx;
-    let bufferCanvas;
-    let bufferCtx;
-    let dragging = false;
-
-    let lineWidth;
-    let strokeStyle;
-    let fillStyle;
-
-    const DEFAULT_LINE_WIDTH = 3;
-		const DEFAULT_STROKE_STYLE = "red";
-    const DEFAULT_FILL_STYLE = "blue";
-  
-    const init = () => {
-      socket = io.connect();
-      socket.on('connect', ()=>{
-        console.log('connected to the server');
-        
-        document.querySelector("#submitButton").onclick = joinButton;
-				document.querySelector("#roomButton").onclick = changeRoomButton;
-				document.querySelector("#clearButton").onclick = clearButton;
-    
-        canvas = document.querySelector("#mainCanvas");
-        ctx = canvas.getContext("2d");
-        
-        bufferCanvas = document.querySelector("#bufferCanvas");
-        bufferCtx = bufferCanvas.getContext("2d");
-        
-        lineWidth = DEFAULT_LINE_WIDTH;
-        strokeStyle = DEFAULT_STROKE_STYLE;
-        fillStyle = DEFAULT_FILL_STYLE;
-        
-        bufferCanvas.onmousedown = doMouseDown;
-        bufferCanvas.onmousemove = doMouseMove;
-        bufferCanvas.onmouseup = doMouseUp;
-        bufferCanvas.onmouseout = doMouseUp;
-        
-        socket.on('recieveDraw', (data)=>{
-          handleMessage(data);
-        });
-        
-        socket.on('requestCanvas', ()=>{
-          sendCanvas();
-        });
-        
-        socket.on('recieveCanvas', (data)=>{
-          handleMessage(data);
-        });
-        
-        socket.on('clear', ()=>{
-          doClear();
-        });
-        
-        socket.on('roomNum', (data)=>{
-					document.querySelector('#roomNum').innerHTML = `Room: ${data}`;
-          console.log(data);
-        });
-      });
-    };
-    
-		const joinButton = () => {
-			
-			if(document.querySelector("#usernameField").value) {
-				socket.emit('join', {
-					name: document.querySelector("#usernameField").value,
-				});
-				
-				document.querySelector("#userInfo").style.visibility = "hidden";
-				
-				document.querySelector("#actualApp").style.visibility = "visible";
-				
-			} else {
-				alert("You must enter a username!");
-			}
-		};
-
-		const changeRoomButton = () =>{
-			if(document.querySelector("#changeRoomField").value) {
-				socket.emit('changeRoom', {
-					newRoom: document.querySelector("#changeRoomField").value,
-				});
-				
-				document.querySelector("#changeRoomField").value = '';
-			} else {
-				alert("You must enter a room name!");
-			}
-		};
-		
-		const clearButton = () => {
-			socket.emit('clearRoom');
-		};
-
-    const handleMessage = (data) => {
-      let image = new Image();
-      
-      image.onload = () => {
-        ctx.save();
-        ctx.globalCompositeOperation = "source-over";
-        ctx.drawImage(image, data.x, data.y, data.width, data.height);
-        ctx.restore();
-      };
-      
-      image.src = data.imgData;
-    };
-
-    const sendCanvas = () => {
-      const data = {
-        x: 0,
-        y: 0,
-        height: canvas.height,
-        width: canvas.width,
-        imgData: canvas.toDataURL()
-      };
-      
-      socket.emit('sendCanvas', data);
-    };
-
-    const sendData = () => {
-      const data = {
-        x: 0,
-        y: 0,
-        height: bufferCanvas.height,
-        width: bufferCanvas.width,
-        imgData: bufferCanvas.toDataURL()
-      };
-      
-      socket.emit('draw', data);
-    };
-
-    const doClearBuffer = (e) => {
-      bufferCtx.clearRect(0,0,bufferCtx.canvas.width,ctx.canvas.height)
-    };
-
-    const getMouse = (e) => {
-      var mouse = {};
-      mouse.x = e.pageX - e.target.offsetLeft;
-      mouse.y = e.pageY - e.target.offsetTop;
-      return mouse;
-    };
-
-    const doMouseDown = (e) => {
-      dragging = true;
-      const mouse = getMouse(e);
-      bufferCtx.beginPath();
-      bufferCtx.moveTo(mouse.x, mouse.y);
-      
-      sendData();
-    };
-
-    const doMouseMove = (e) => {
-      if (!dragging) {
-        return;
+  <head>
+    <link rel="stylesheet" type="text/css" href="/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
+    <style>
+      body {
+        margin: 0;
       }
-      
-      const mouse = getMouse(e);
-      
-      bufferCtx.strokeStyle = strokeStyle;
-      bufferCtx.lineWidth = lineWidth;
-      
-      bufferCtx.lineTo(mouse.x, mouse.y);
-      bufferCtx.stroke();
-      
-      sendData();
-    };
 
-    const doMouseUp = (e) => {
-      bufferCtx.closePath();
-      dragging = false;
-      
-      pushBuffer();
-      
-      sendData();
-      doClearBuffer();
-    };
+      canvas {
+        margin: 0;
+        border: 1px solid black;
+      }
 
-    const pushBuffer = () => {
-      let image = new Image();
-      
-      image.onload = () => {
-        ctx.save();
-        ctx.globalCompositeOperation = "source-over";
-        ctx.drawImage(image, 0, 0, bufferCanvas.width, bufferCanvas.height);
-        ctx.restore();
-      };
-      
-      image.src = bufferCanvas.toDataURL();
-    };
+      body {
+        background: #eeeeee;
+        font-family: tahoma, verdana, sans serif;
+      }
 
-    const doClear = () => {
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    };
-      
-    window.onload = init;
-  </script>
-</head>
-<body>
-	<div id="actualApp">
-  	<canvas id="mainCanvas" width="960px" height="530px"></canvas>
-  	<canvas id="bufferCanvas" width="960px" height="530px"></canvas>
-		<div id="roomInfo">
-			<input id="changeRoomField" placeholder="Room Name" type="text" />
-			<button id="roomButton"> Change Your Room </button>
-			<p id="roomNum"></p>
-			<button id="clearButton"> Clear the Canvas </button>
-			<section>
-				<h1>Users</h1>
-				<ul>
-					<li id="user1"></li>
-					<li id="user2"></li>
-					<li id="user3"></li>
-					<li id="user4"></li>
-				</ul>
-			</section>
-		</div>
-	</div>
-		
-	<div id="userInfo">
-		<input id="usernameField" placeholder="Username" type="text"/>
-		<button id="submitButton" > Connect to the Server </button>
-	</div>
-</body>
+      #mainCanvas {
+        background: #ffffff;
+        position: absolute;
+        z-index: 0;
+        left: 10px;
+        top: 10px;
+        box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+      }
+
+      #bufferCanvas{
+        background: rgba(0,0,0,0);
+        position: absolute;
+        z-index: 0;
+        left: 10px;
+        top: 10px;
+        cursor: pointer;
+      }
+
+      #roomInfo 	{
+        position: absolute;
+        left: 10px;
+        top: 550px;
+      }
+
+      #actualApp{
+        visibility: hidden;
+      }
+    </style>
+    <script type="text/babel" >
+"use strict"; 
+let socket;
+let canvas;
+let ctx;
+let bufferCanvas;
+let bufferCtx;
+let dragging = false;
+let canDraw = false;
+
+let lineWidth;
+let strokeStyle;
+let fillStyle;
+
+let thisUserName = '';
+const otherUsers = {
+  u1:'',
+  u2:'',
+  u3:'',
+};
+
+const DEFAULT_LINE_WIDTH = 3;
+const DEFAULT_STROKE_STYLE = "red";
+const DEFAULT_FILL_STYLE = "blue";
+
+const init = () => {
+  socket = io.connect();
+  socket.on('connect', ()=>{
+    console.log('connected to the server');
+
+    document.querySelector("#submitButton").onclick = joinButton;
+    document.querySelector("#roomButton").onclick = changeRoomButton;
+    document.querySelector("#clearButton").onclick = clearButton;
+
+    canvas = document.querySelector("#mainCanvas");
+    ctx = canvas.getContext("2d");
+
+    bufferCanvas = document.querySelector("#bufferCanvas");
+    bufferCtx = bufferCanvas.getContext("2d");
+
+    lineWidth = DEFAULT_LINE_WIDTH;
+    strokeStyle = DEFAULT_STROKE_STYLE;
+    fillStyle = DEFAULT_FILL_STYLE;
+
+    bufferCanvas.onmousedown = doMouseDown;
+    bufferCanvas.onmousemove = doMouseMove;
+    bufferCanvas.onmouseup = doMouseUp;
+    bufferCanvas.onmouseout = doMouseUp;
+
+    updateUserDisplay();
+
+    socket.on('recieveDraw', (data)=>{
+      handleMessage(data);
+    });
+
+    socket.on('requestCanvas', (data)=>{
+      sendCanvas();
+      addUser(data.name);
+
+    });
+
+    socket.on('uDisconnect', (data) =>{
+      console.log("Recieved user disconnect");
+      removeUser(data);
+    });
+
+    socket.on('recieveCanvas', (data)=>{
+      handleMessage(data);
+      addUser(data.name);
+    });
+
+    socket.on('clear', ()=>{
+      doClear();
+    });
+
+    socket.on('newRoomFull', () =>{
+      alert('The room you tried to join is full!');
+    });
+
+    socket.on('roomNum', (data)=>{
+      document.querySelector('#roomNum').innerHTML = `Room: ${data.roomNum}`;
+      thisUserName = data.name;
+      updateUserDisplay();
+      console.log("data: ");
+      console.dir(data);
+    });
+  });
+};
+
+const addUser = (name) => {
+  if(nameValidation(name)){
+    if(otherUsers.u1 === ''){
+      otherUsers.u1 = name;
+    }else if(otherUsers.u2  === ''){
+      otherUsers.u2 = name;
+    }else{
+      otherUsers.u3 = name;
+    }
+
+    updateUserDisplay();
+  }
+}
+
+const removeUser = (name) => {
+  if(nameValidation(name)){
+    if(otherUsers.u1 === name){
+      otherUsers.u1 = '';
+    }else if(otherUsers.u2 === name){
+      otherUsers.u2 = '';
+    }else{
+      otherUsers.u3 = '';
+    }
+
+    updateUserDisplay();
+  }
+}
+
+const nameValidation = (name) => {
+  if(otherUsers.u1 === name){
+    return false;
+  }else if(otherUsers.u2 === name){
+    return false;
+  }else if((otherUsers.u3 === name)){
+    return false;
+  }else{
+    return true;
+  }
+};
+
+const updateUserDisplay = () => {
+  document.querySelector("#thisUser").innerHTML = thisUserName;
+  document.querySelector("#user1").innerHTML = otherUsers.u1;
+  document.querySelector("#user2").innerHTML = otherUsers.u2;
+  document.querySelector("#user3").innerHTML = otherUsers.u3;
+
+  console.dir(otherUsers);
+};
+
+const joinButton = () => {
+
+  if(document.querySelector("#usernameField").value) {
+    socket.emit('join', {
+      name: document.querySelector("#usernameField").value,
+    });
+
+    document.querySelector("#userInfo").style.visibility = "hidden";
+
+    document.querySelector("#actualApp").style.visibility = "visible";
+
+  } else {
+    alert("You must enter a username!");
+  }
+};
+
+const changeRoomButton = () =>{
+  if(document.querySelector("#changeRoomField").value) {
+    socket.emit('changeRoom', {
+      newRoom: document.querySelector("#changeRoomField").value,
+    });
+
+    document.querySelector("#changeRoomField").value = '';
+  } else {
+    alert("You must enter a room name!");
+  }
+};
+
+const clearButton = () => {
+  socket.emit('clearRoom');
+};
+
+const handleMessage = (data) => {
+  let image = new Image();
+
+  image.onload = () => {
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.drawImage(image, data.x, data.y, data.width, data.height);
+    ctx.restore();
+  };
+
+  image.src = data.imgData;
+};
+
+const sendCanvas = () => {
+  const data = {
+    name: thisUserName,
+    x: 0,
+    y: 0,
+    height: canvas.height,
+    width: canvas.width,
+    imgData: canvas.toDataURL()
+  };
+
+  socket.emit('sendCanvas', data);
+};
+
+const sendData = () => {
+  const data = {
+    x: 0,
+    y: 0,
+    height: bufferCanvas.height,
+    width: bufferCanvas.width,
+    imgData: bufferCanvas.toDataURL()
+  };
+
+  socket.emit('draw', data);
+};
+
+const doClearBuffer = (e) => {
+  bufferCtx.clearRect(0,0,bufferCtx.canvas.width,ctx.canvas.height)
+};
+
+const getMouse = (e) => {
+  var mouse = {};
+  mouse.x = e.pageX - e.target.offsetLeft;
+  mouse.y = e.pageY - e.target.offsetTop;
+  return mouse;
+};
+
+const doMouseDown = (e) => {
+  if(canDraw){
+    dragging = true;
+    const mouse = getMouse(e);
+    bufferCtx.beginPath();
+    bufferCtx.moveTo(mouse.x, mouse.y);
+
+    sendData();
+  }
+};
+
+const doMouseMove = (e) => {
+  if (!dragging) {
+    return;
+  }
+
+  const mouse = getMouse(e);
+
+  bufferCtx.strokeStyle = strokeStyle;
+  bufferCtx.lineWidth = lineWidth;
+
+  bufferCtx.lineTo(mouse.x, mouse.y);
+  bufferCtx.stroke();
+
+  sendData();
+};
+
+const doMouseUp = (e) => {
+  bufferCtx.closePath();
+  dragging = false;
+
+  pushBuffer();
+
+  sendData();
+  doClearBuffer();
+};
+
+const pushBuffer = () => {
+  let image = new Image();
+
+  image.onload = () => {
+    ctx.save();
+    ctx.globalCompositeOperation = "source-over";
+    ctx.drawImage(image, 0, 0, bufferCanvas.width, bufferCanvas.height);
+    ctx.restore();
+  };
+
+  image.src = bufferCanvas.toDataURL();
+};
+
+const doClear = () => {
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+};
+
+window.onload = init;
+    </script>
+  </head>
+  <body>
+    <div id="actualApp">
+      <canvas id="mainCanvas" width="960px" height="530px"></canvas>
+      <canvas id="bufferCanvas" width="960px" height="530px"></canvas>
+      <div id="roomInfo">
+        <input id="changeRoomField" placeholder="Room Name" type="text" />
+        <button id="roomButton"> Change Your Room </button>
+        <p id="roomNum"></p>
+        <button id="clearButton"> Clear the Canvas </button>
+        <section>
+          <h1>Users</h1>
+          <ul>
+            <li id="thisUser"></li>
+            <li id="user1"></li>
+            <li id="user2"></li>
+            <li id="user3"></li>
+          </ul>
+        </section>
+      </div>
+    </div>
+
+    <div id="userInfo">
+      <input id="usernameField" placeholder="Username" type="text"/>
+      <button id="submitButton" > Connect to the Server </button>
+    </div>
+  </body>
 </html>

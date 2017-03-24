@@ -59,10 +59,6 @@ let dragging = false;
 let canDraw = false;
 let roomName = {};
 
-let lineWidth;
-let strokeStyle;
-let fillStyle;
-
 let thisUserName = '';
 let otherUsers = {
   u1:'',
@@ -74,6 +70,10 @@ const DEFAULT_LINE_WIDTH = 3;
 const DEFAULT_STROKE_STYLE = "red";
 const DEFAULT_FILL_STYLE = "blue";
 
+let lineWidth;
+let strokeStyle;
+let fillStyle;
+
 const init = () => {
   socket = io.connect();
   socket.on('connect', ()=>{
@@ -82,6 +82,9 @@ const init = () => {
     document.querySelector("#submitButton").onclick = joinButton;
     document.querySelector("#roomButton").onclick = changeRoomButton;
     document.querySelector("#clearButton").onclick = clearButton;
+
+    document.querySelector("#color").onchange = updateStyle;
+    document.querySelector('#size').onchange = updateStyle;
 
     canvas = document.querySelector("#mainCanvas");
     ctx = canvas.getContext("2d");
@@ -97,6 +100,9 @@ const init = () => {
     bufferCanvas.onmousemove = doMouseMove;
     bufferCanvas.onmouseup = doMouseUp;
     bufferCanvas.onmouseout = doMouseUp;
+
+    bufferCtx.lineCap = "round";
+    bufferCtx.lineJoin = "round";
 
     updateUserDisplay();
 
@@ -159,6 +165,11 @@ const init = () => {
       }
     });
   });
+};
+
+const updateStyle = () => {
+  lineWidth = document.querySelector("#size").value;
+  strokeStyle = document.querySelector("#color").value;
 };
 
 const addUser = (name) => {
@@ -231,7 +242,7 @@ const changeRoomButton = () =>{
     alert("Invalid Character!");
     return;
   }
-  
+
   if(document.querySelector("#changeRoomField").value &&( document.querySelector("#changeRoomField").value != roomName)) {
     socket.emit('changeRoom', {
       newRoom: document.querySelector("#changeRoomField").value,
@@ -331,11 +342,10 @@ const doMouseMove = (e) => {
 
   bufferCtx.lineTo(mouse.x, mouse.y);
   bufferCtx.stroke();
-  bufferCtx.closePath();
-
-
-  bufferCtx.beginPath();
-  bufferCtx.moveTo(mouse.x, mouse.y);
+  //  bufferCtx.closePath();
+  //
+  //  bufferCtx.beginPath();
+  //  bufferCtx.moveTo(mouse.x, mouse.y);
 
   sendData();
 };
@@ -376,10 +386,14 @@ window.onload = init;
       <canvas id="bufferCanvas" width="960px" height="530px"></canvas>
       <div id="roomInfo">
         <p id="canDrawEle"></p>
+        <div id="drawing tools">
+          <p>Color: <input id="color" placeholder="Color name or Hexcode" type="text" /></p>
+          <p>Size: <input id="size" placeholder="An Integer" type="text" /></p>
+          <button id="clearButton"> Clear the Canvas </button>
+        </div>
         <input id="changeRoomField" placeholder="Room Name" type="text" />
         <button id="roomButton"> Change Your Room </button>
         <p id="roomNum"></p>
-        <button id="clearButton"> Clear the Canvas </button>
         <section>
           <h1>Users</h1>
           <ul>
@@ -391,7 +405,6 @@ window.onload = init;
         </section>
       </div>
     </div>
-
     <div id="userInfo">
       <input id="usernameField" placeholder="Username" type="text"/>
       <button id="submitButton" > Connect to the Server </button>

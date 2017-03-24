@@ -57,6 +57,7 @@ let bufferCanvas;
 let bufferCtx;
 let dragging = false;
 let canDraw = false;
+let roomName = {};
 
 let lineWidth;
 let strokeStyle;
@@ -128,6 +129,7 @@ const init = () => {
     });
 
     socket.on('roomNum', (data)=>{
+      roomName = data.roomNum;
       document.querySelector('#roomNum').innerHTML = `Room: ${data.roomNum}`;
       thisUserName = data.name;
       updateUserDisplay();
@@ -221,7 +223,7 @@ const joinButton = () => {
 };
 
 const changeRoomButton = () =>{
-  if(document.querySelector("#changeRoomField").value) {
+  if(document.querySelector("#changeRoomField").value && &&( document.querySelector("#changeRoomField").value != roomName)) {
     socket.emit('changeRoom', {
       newRoom: document.querySelector("#changeRoomField").value,
     });
@@ -234,7 +236,7 @@ const changeRoomButton = () =>{
 
     document.querySelector("#changeRoomField").value = '';
   } else {
-    alert("You must enter a room name!");
+    alert("You must enter a room name or a new room name!");
   }
 };
 

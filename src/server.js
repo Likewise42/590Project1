@@ -30,10 +30,19 @@ const newRoom = (sock, name) => {
     title: name,
     userNum: 0,
     userList: {},
+    drawingUser: 0,
   };
   console.dir(rooms[name]);
 
   socket.roomToJoin = rooms[name].title;
+};
+
+const joinRoom = (sock) => {
+  const socket = sock;
+  rooms[socket.roomToJoin].userNum++;
+  rooms[socket.roomToJoin].userList[socket.name] = {};
+  rooms[socket.roomToJoin].userList[socket.name].name = socket.name;
+  console.log(`User ${rooms[socket.roomToJoin].userList[socket.name].name} is joining room ${socket.roomToJoin}. Users:${rooms[socket.roomToJoin].userNum} `);
 };
 
 const listeners = (sock) => {
@@ -60,8 +69,7 @@ const listeners = (sock) => {
       newRoom(socket, `room${roomNum}`);
     }
 
-    rooms[socket.roomToJoin].userNum++;
-    console.log(`Joining room ${socket.roomToJoin}. Users:${rooms[socket.roomToJoin].userNum} `);
+    joinRoom(socket);
 
     socket.join(socket.roomToJoin);
 
@@ -71,6 +79,14 @@ const listeners = (sock) => {
     });
 
     socket.broadcast.to(socket.roomToJoin).emit('requestCanvas', { name: socket.name });
+
+    const toJoin = rooms[socket.roomToJoin];
+    const drawingKeys = Object.keys(toJoin.userList);
+    const currentDrawingUser = toJoin.userList[drawingKeys[toJoin.drawingUser]];
+
+    io.sockets.in(toJoin.title).emit('nextDrawingUser', {
+      name: currentDrawingUser.name,
+    });
   });
 
   socket.on('changeRoom', (data) => {
@@ -101,13 +117,12 @@ const listeners = (sock) => {
     }
 
     if (joinSuccess) {
-      rooms[socket.roomToJoin].userNum++;
-      console.log(`Joining room ${socket.roomToJoin}. Users:${rooms[socket.roomToJoin].userNum} `);
+      joinRoom(socket);
 
       socket.join(socket.roomToJoin);
 
       socket.emit('clear');
-      socket.emit('roomNum',{
+      socket.emit('roomNum', {
         roomNum: socket.roomToJoin,
         name: socket.name,
       });
@@ -135,6 +150,9 @@ const listeners = (sock) => {
 
       socket.leave(socket.roomToJoin);
       rooms[socket.roomToJoin].userNum--;
+
+      delete (rooms[socket.roomToJoin].userList[socket.name]);
+
       console.log(`Leaving room ${socket.roomToJoin}`);
     }
   });
@@ -145,6 +163,31 @@ io.sockets.on('connection', (socket) => {
 
   listeners(socket);
 });
+
+setInterval(() => {
+  const keys = Object.keys(rooms);
+  for (let i = 0; i < keys.length; i++) {
+    const room = rooms[keys[i]];
+
+    room.drawingUser++;
+
+    console.log(`${room.drawingUser} ${room.userNum}`);
+
+    if (room.drawingUser >= room.userNum) {
+      room.drawingUser = 0;
+    }
+
+    console.dir(room.userList);
+
+    const drawingKeys = Object.keys(room.userList);
+    const currentDrawingUser = room.userList[drawingKeys[room.drawingUser]];
+
+    console.log(currentDrawingUser.name);
+    io.sockets.in(room.title).emit('nextDrawingUser', {
+      name: currentDrawingUser.name,
+    });
+  }
+}, 15000);
 
 // setInterval(() => {
 //  const keys = Object.keys(rooms);

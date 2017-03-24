@@ -29,7 +29,7 @@
         box-shadow: 4px 4px 8px rgba(0,0,0,0.5);
       }
 
-      #bufferCanvas{
+      #bufferCanvas {
         background: rgba(0,0,0,0);
         position: absolute;
         z-index: 0;
@@ -38,18 +38,18 @@
         cursor: pointer;
       }
 
-      #roomInfo 	{
+      #roomInfo {
         position: absolute;
         left: 10px;
         top: 550px;
       }
 
-      #actualApp{
+      #actualApp {
         visibility: hidden;
       }
     </style>
     <script type="text/babel" >
-"use strict"; 
+"use strict";
 let socket;
 let canvas;
 let ctx;
@@ -133,6 +133,18 @@ const init = () => {
       updateUserDisplay();
       console.log("data: ");
       console.dir(data);
+    });
+    
+    socket.on('nextDrawingUser', (data)=>{
+      if(thisUserName === data.name){
+        canDraw = true;
+        
+        document.querySelector("#canDrawEle").innerHTML = "You can draw!";
+      }else{
+        canDraw = false;
+        
+        document.querySelector("#canDrawEle").innerHTML = "You cannot draw right now.";
+      }
     });
   });
 };
@@ -271,7 +283,7 @@ const doMouseDown = (e) => {
   if(canDraw){
     dragging = true;
     const mouse = getMouse(e);
-    bufferCtx.beginPath();
+    //bufferCtx.beginPath();
     bufferCtx.moveTo(mouse.x, mouse.y);
 
     sendData();
@@ -281,6 +293,10 @@ const doMouseDown = (e) => {
 const doMouseMove = (e) => {
   if (!dragging) {
     return;
+  }
+  
+  if(!canDraw) {
+    doMouseUp();
   }
 
   const mouse = getMouse(e);
@@ -295,7 +311,7 @@ const doMouseMove = (e) => {
 };
 
 const doMouseUp = (e) => {
-  bufferCtx.closePath();
+  //bufferCtx.closePath();
   dragging = false;
 
   pushBuffer();
@@ -329,6 +345,7 @@ window.onload = init;
       <canvas id="mainCanvas" width="960px" height="530px"></canvas>
       <canvas id="bufferCanvas" width="960px" height="530px"></canvas>
       <div id="roomInfo">
+        <p id="canDrawEle"></p>
         <input id="changeRoomField" placeholder="Room Name" type="text" />
         <button id="roomButton"> Change Your Room </button>
         <p id="roomNum"></p>

@@ -52,50 +52,71 @@ const listeners = (sock) => {
     socket.roomToJoin = {};
     socket.name = data.name;
     let makeNew = true;
+    let nameValid = true;
 
     const keys = Object.keys(rooms);
 
     for (let i = 0; i < keys.length; i++) {
       const room = rooms[keys[i]];
 
-      if (room.userNum < 4) {
+      const userNameKeys = Object.keys(room.userList);
+      for (let j = 0; j < userNameKeys.length; j++) {
+        const userName = room.userList[userNameKeys[j]];
+
+        if (userName.name === socket.name) {
+          nameValid = false;
+        }
+      }
+
+      if (nameValid && room.userNum < 4) {
         socket.roomToJoin = room.title;
         makeNew = false;
       }
     }
 
-    if (makeNew) {
-      roomNum++;
-      newRoom(socket, `room${roomNum}`);
+    if (nameValid) {
+      if (makeNew) {
+        roomNum++;
+        newRoom(socket, `room${roomNum}`);
+      }
+
+      socket.emit('nameValid');
+
+      joinRoom(socket);
+
+      socket.join(socket.roomToJoin);
+
+      socket.emit('roomNum', {
+        roomNum: socket.roomToJoin,
+        name: socket.name,
+      });
+
+      socket.broadcast.to(socket.roomToJoin).emit('requestCanvas', { name: socket.name });
+
+      const toJoin = rooms[socket.roomToJoin];
+      const drawingKeys = Object.keys(toJoin.userList);
+      const currentDrawingUser = toJoin.userList[drawingKeys[toJoin.drawingUser]];
+
+      io.sockets.in(toJoin.title).emit('nextDrawingUser', {
+        name: currentDrawingUser.name,
+      });
+    } else {
+      socket.emit('nameInvalid');
     }
-
-    joinRoom(socket);
-
-    socket.join(socket.roomToJoin);
-
-    socket.emit('roomNum', {
-      roomNum: socket.roomToJoin,
-      name: socket.name,
-    });
-
-    socket.broadcast.to(socket.roomToJoin).emit('requestCanvas', { name: socket.name });
-
-    const toJoin = rooms[socket.roomToJoin];
-    const drawingKeys = Object.keys(toJoin.userList);
-    const currentDrawingUser = toJoin.userList[drawingKeys[toJoin.drawingUser]];
-
-    io.sockets.in(toJoin.title).emit('nextDrawingUser', {
-      name: currentDrawingUser.name,
-    });
   });
 
   socket.on('changeRoom', (data) => {
     let makeNew = true;
     let joinSuccess = true;
 
+    socket.leave(socket.roomToJoin);
+
     rooms[socket.roomToJoin].userNum--;
 
     const keys = Object.keys(rooms);
+
+    socket.broadcast.to(socket.roomToJoin).emit('uDisconnect', socket.name);
+    delete (rooms[socket.roomToJoin].userList[socket.name]);
 
     for (let i = 0; i < keys.length; i++) {
       const room = rooms[keys[i]];
@@ -118,6 +139,7 @@ const listeners = (sock) => {
 
     if (joinSuccess) {
       joinRoom(socket);
+
 
       socket.join(socket.roomToJoin);
 
@@ -165,9 +187,12 @@ io.sockets.on('connection', (socket) => {
 });
 
 setInterval(() => {
+  console.log('---');
   const keys = Object.keys(rooms);
   for (let i = 0; i < keys.length; i++) {
     const room = rooms[keys[i]];
+
+    console.log(`Room ${room.title}`);
 
     room.drawingUser++;
 
@@ -180,13 +205,20 @@ setInterval(() => {
     console.dir(room.userList);
 
     const drawingKeys = Object.keys(room.userList);
-    const currentDrawingUser = room.userList[drawingKeys[room.drawingUser]];
 
-    console.log(currentDrawingUser.name);
-    io.sockets.in(room.title).emit('nextDrawingUser', {
-      name: currentDrawingUser.name,
-    });
+    if (drawingKeys.length > 0) {
+      const currentDrawingUser = room.userList[drawingKeys[room.drawingUser]];
+
+      console.log(currentDrawingUser.name);
+      io.sockets.in(room.title).emit('nextDrawingUser', {
+        name: currentDrawingUser.name,
+      });
+    } else {
+      console.log('No Users In Room');
+    }
   }
+
+  console.log('---');
 }, 15000);
 
 // setInterval(() => {

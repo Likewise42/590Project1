@@ -63,7 +63,7 @@ let strokeStyle;
 let fillStyle;
 
 let thisUserName = '';
-const otherUsers = {
+let otherUsers = {
   u1:'',
   u2:'',
   u3:'',
@@ -110,7 +110,7 @@ const init = () => {
     });
 
     socket.on('uDisconnect', (data) =>{
-      console.log("Recieved user disconnect");
+      console.log("Recieved user disconnect: "+data);
       removeUser(data);
     });
 
@@ -134,15 +134,25 @@ const init = () => {
       console.log("data: ");
       console.dir(data);
     });
-    
+
+    socket.on('nameValid', (data)=>{
+      document.querySelector("#userInfo").style.visibility = "hidden";
+
+      document.querySelector("#actualApp").style.visibility = "visible";
+    });
+
+    socket.on('nameInvalid', (data)=>{
+      alert("You must enter a username that is not already in use!");
+    });
+
     socket.on('nextDrawingUser', (data)=>{
       if(thisUserName === data.name){
         canDraw = true;
-        
+
         document.querySelector("#canDrawEle").innerHTML = "You can draw!";
       }else{
         canDraw = false;
-        
+
         document.querySelector("#canDrawEle").innerHTML = "You cannot draw right now.";
       }
     });
@@ -164,7 +174,7 @@ const addUser = (name) => {
 }
 
 const removeUser = (name) => {
-  if(nameValidation(name)){
+  if(!nameValidation(name)){
     if(otherUsers.u1 === name){
       otherUsers.u1 = '';
     }else if(otherUsers.u2 === name){
@@ -205,10 +215,6 @@ const joinButton = () => {
       name: document.querySelector("#usernameField").value,
     });
 
-    document.querySelector("#userInfo").style.visibility = "hidden";
-
-    document.querySelector("#actualApp").style.visibility = "visible";
-
   } else {
     alert("You must enter a username!");
   }
@@ -220,6 +226,12 @@ const changeRoomButton = () =>{
       newRoom: document.querySelector("#changeRoomField").value,
     });
 
+    otherUsers = {
+      u1:'',
+      u2:'',
+      u3:'',
+    };
+
     document.querySelector("#changeRoomField").value = '';
   } else {
     alert("You must enter a room name!");
@@ -227,7 +239,9 @@ const changeRoomButton = () =>{
 };
 
 const clearButton = () => {
-  socket.emit('clearRoom');
+  if(canDraw){
+    socket.emit('clearRoom');
+  }
 };
 
 const handleMessage = (data) => {
@@ -283,7 +297,7 @@ const doMouseDown = (e) => {
   if(canDraw){
     dragging = true;
     const mouse = getMouse(e);
-    //bufferCtx.beginPath();
+    bufferCtx.beginPath();
     bufferCtx.moveTo(mouse.x, mouse.y);
 
     sendData();
@@ -294,7 +308,7 @@ const doMouseMove = (e) => {
   if (!dragging) {
     return;
   }
-  
+
   if(!canDraw) {
     doMouseUp();
   }
@@ -306,12 +320,17 @@ const doMouseMove = (e) => {
 
   bufferCtx.lineTo(mouse.x, mouse.y);
   bufferCtx.stroke();
+  bufferCtx.closePath();
+
+
+  bufferCtx.beginPath();
+  bufferCtx.moveTo(mouse.x, mouse.y);
 
   sendData();
 };
 
 const doMouseUp = (e) => {
-  //bufferCtx.closePath();
+  bufferCtx.closePath();
   dragging = false;
 
   pushBuffer();

@@ -214,12 +214,19 @@ setInterval(() => {
         name: currentDrawingUser.name,
       });
     } else {
-      console.log('No Users In Room');
+      console.log('No Users In Room. Deleting Room.');
+      delete(rooms[keys[i]]);
     }
   }
 
   console.log('---');
 }, 15000);
+
+let number = 0;
+setInterval(()=>{
+  number++;
+  console.log(number);
+},1000)
 
 // setInterval(() => {
 //  const keys = Object.keys(rooms);

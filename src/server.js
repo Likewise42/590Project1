@@ -186,47 +186,46 @@ io.sockets.on('connection', (socket) => {
   listeners(socket);
 });
 
+let timeTilNext = 15;
 setInterval(() => {
-  console.log('---');
-  const keys = Object.keys(rooms);
-  for (let i = 0; i < keys.length; i++) {
-    const room = rooms[keys[i]];
+  timeTilNext--;
+  console.log(timeTilNext);
+  if (timeTilNext <= 0) {
+    console.log('---');
+    const keys = Object.keys(rooms);
+    for (let i = 0; i < keys.length; i++) {
+      const room = rooms[keys[i]];
 
-    console.log(`Room ${room.title}`);
+      console.log(`Room ${room.title}`);
 
-    room.drawingUser++;
+      room.drawingUser++;
 
-    console.log(`${room.drawingUser} ${room.userNum}`);
+      console.log(`${room.drawingUser} ${room.userNum}`);
 
-    if (room.drawingUser >= room.userNum) {
-      room.drawingUser = 0;
+      if (room.drawingUser >= room.userNum) {
+        room.drawingUser = 0;
+      }
+
+      console.dir(room.userList);
+
+      const drawingKeys = Object.keys(room.userList);
+
+      if (drawingKeys.length > 0) {
+        const currentDrawingUser = room.userList[drawingKeys[room.drawingUser]];
+
+        console.log(currentDrawingUser.name);
+        io.sockets.in(room.title).emit('nextDrawingUser', {
+          name: currentDrawingUser.name,
+        });
+      } else {
+        console.log('No Users In Room. Deleting Room.');
+        delete (rooms[keys[i]]);
+      }
     }
-
-    console.dir(room.userList);
-
-    const drawingKeys = Object.keys(room.userList);
-
-    if (drawingKeys.length > 0) {
-      const currentDrawingUser = room.userList[drawingKeys[room.drawingUser]];
-
-      console.log(currentDrawingUser.name);
-      io.sockets.in(room.title).emit('nextDrawingUser', {
-        name: currentDrawingUser.name,
-      });
-    } else {
-      console.log('No Users In Room. Deleting Room.');
-      delete(rooms[keys[i]]);
-    }
+    console.log('---');
+    timeTilNext = 15;
   }
-
-  console.log('---');
-}, 15000);
-
-let number = 0;
-setInterval(()=>{
-  number++;
-  console.log(number);
-},1000)
+}, 1000);
 
 // setInterval(() => {
 //  const keys = Object.keys(rooms);

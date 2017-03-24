@@ -211,6 +211,9 @@ const updateUserDisplay = () => {
 };
 
 const joinButton = () => {
+  if(document.querySelector("#usernameField").value.indexOf('<') > -1){
+    alert("Invalid Character!");
+  }
 
   if(document.querySelector("#usernameField").value) {
     socket.emit('join', {

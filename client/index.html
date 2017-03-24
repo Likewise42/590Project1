@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+		<title>Take your turn!</title>
     <link rel="stylesheet" type="text/css" href="/style.css">
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
@@ -382,13 +383,13 @@ window.onload = init;
   </head>
   <body>
     <div id="actualApp">
-      <canvas id="mainCanvas" width="960px" height="530px"></canvas>
-      <canvas id="bufferCanvas" width="960px" height="530px"></canvas>
+      <canvas id="mainCanvas" width="960" height="530"></canvas>
+      <canvas id="bufferCanvas" width="960" height="530"></canvas>
       <div id="roomInfo">
         <p id="canDrawEle"></p>
 				<p>This app is designed to allow you and your friends to draw together, with a twist! Each person will get approxiamtely 15 seconds to draw, then someone else will take over, and the fate of the drawing is in their hands!</p>
 				<p>You can change the color of the brush to any valid CSS Color or Hexadecial code, and change the size to anything from .05 to a size bigger then the screen! </p>
-        <div id="drawing tools">
+        <div id="drawingTools">
           <p>Color: <input id="color" placeholder="Color name or Hexcode" type="text" /></p>
           <p>Size: <input id="size" placeholder="An Integer" type="text" /></p>
           <button id="clearButton"> Clear the Canvas </button>

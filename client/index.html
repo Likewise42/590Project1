@@ -223,7 +223,7 @@ const joinButton = () => {
 };
 
 const changeRoomButton = () =>{
-  if(document.querySelector("#changeRoomField").value && &&( document.querySelector("#changeRoomField").value != roomName)) {
+  if(document.querySelector("#changeRoomField").value &&( document.querySelector("#changeRoomField").value != roomName)) {
     socket.emit('changeRoom', {
       newRoom: document.querySelector("#changeRoomField").value,
     });
